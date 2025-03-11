@@ -7,8 +7,11 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import android.app.Activity;
+import android.app.Instrumentation;
+import android.app.UiAutomation;
 import android.content.ContentResolver;
 import android.content.ContentUris;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
@@ -19,8 +22,11 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.documentfile.provider.DocumentFile;
+import androidx.test.core.app.ActivityScenario;
 import androidx.test.core.app.ApplicationProvider;
+import androidx.test.ext.junit.rules.ActivityScenarioRule;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.rule.GrantPermissionRule;
 
 import org.junit.After;
@@ -29,6 +35,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.opendatakit.logging.WebLogger;
+import org.opendatakit.test_utils.TestActivity;
 
 import java.io.File;
 import java.io.IOException;
@@ -56,6 +63,9 @@ public class ODKScopedFileUtilsTest {
     private Context context;
     private ContentResolver contentResolver;
 
+
+    @Rule
+    public ActivityScenarioRule<TestActivity> rule = new ActivityScenarioRule<>(TestActivity.class);
 
     @Rule
     public GrantPermissionRule permissionRule = GrantPermissionRule.grant(
@@ -97,6 +107,7 @@ public class ODKScopedFileUtilsTest {
                 IllegalArgumentException.class,
                 () -> ODKFileUtils.getAsFile(null, URI_FRAGMENT)
         );
+
         assertThrows(
                 IllegalArgumentException.class,
                 () -> ODKFileUtils.getAsFile("", URI_FRAGMENT)
@@ -146,6 +157,9 @@ public class ODKScopedFileUtilsTest {
         assertNull(ODKFileUtils.fileFromUriOnWebServer(TEST_APP + URI_FRAGMENT));
     }
 
+    private void createAppDirectoryUsingScopedStorage(String directory) {
+
+    }
     private void createAppDirectory(String directory) {
         assertTrue(ODKFileUtils.createFolder(ODK_FOLDER_PATH+PATH_SEPARATOR+TEST_APP+PATH_SEPARATOR+directory));
     }
@@ -166,7 +180,8 @@ public class ODKScopedFileUtilsTest {
             } else {
                 Log.e("ODKFileUtilsTest", "File already exists.");
             }
-            return DocumentFile.fromFile(file).getUri();
+            Uri uri = DocumentFile.fromFile(file).getUri();
+            return uri;
         } catch (IOException e) {
             Log.e("ODKFileUtilsTest", "File creation failed", e);
             return null;
@@ -175,7 +190,8 @@ public class ODKScopedFileUtilsTest {
 
     private void assertFileFromUriOnWebServer_withBasicUri_returnsFile(String folderName, String fileName){
         createAppDirectory(folderName);
-        Uri expectedFileUri = createFile(folderName, fileName);
+//        Uri expectedFileUri = createDocumentFile(buildDocumentFileUri(folderName), fileName, "fileName");
+        Uri expectedFileUri = getMediaStoreUri(context, fileName);
         File actualODKFile = ODKFileUtils.fileFromUriOnWebServer(
                 TEST_APP + folderName + PATH_SEPARATOR + fileName
         );
@@ -227,23 +243,43 @@ public class ODKScopedFileUtilsTest {
     }
 
     @Test
-    public void getNameOfSQLiteDatabase_returnsSQLiteDBName() {
+    public void fileFromUriOnWebServer_withInvalidUri_returnsNull() {
+        assertNull(ODKFileUtils.fileFromUriOnWebServer("appName"));
+    }
+
+    @Test
+    public void getNameOfSQLiteDatabase_returnsSQLiteDBFilename() {
         assertEquals("sqlite.db", ODKFileUtils.getNameOfSQLiteDatabase());
     }
 
     @Test
-    public void fileFromUriOnWebServer_withInvalidUri_returnsNull() {
-        assertNull(ODKFileUtils.fileFromUriOnWebServer("appName"));
+    public void getNameOfSQLiteDatabase_returnsSQLiteDBLockFilename() {
+        assertEquals("db.lock", ODKFileUtils.getNameOfSQLiteDatabaseLockFile());
     }
+
+    @Test
+    public void verifyExternalStorageAvailability_whenStorageIsUnavailableOrInaccessible_throwsException(){
+        assertThrows(RuntimeException.class, ODKFileUtils::verifyExternalStorageAvailability);
+    }
+
     @Test
     public void givenServicesInstalled_testCreateFolder() {
         String folderName = "odk_config";
         assertTrue(ODKFileUtils.createFolder(ODK_FOLDER_PATH+PATH_SEPARATOR+TEST_APP+folderName));
     }
 
+    @Test
+    public void givenServicesInstalled_testCreateFolder_withConflictingFilename() {
+        createFile("", "odk_config");
+        String folderName = "odk_config";
+        assertTrue(ODKFileUtils.createFolder(ODK_FOLDER_PATH+PATH_SEPARATOR+TEST_APP+folderName));
+    }
 
+    /*
+    Scoped Storage helper functions
+     */
     private Uri buildDocumentFileUri(String filePath){
-        return Uri.parse("content://"+ODK_FOLDER_PATH).buildUpon()
+        return Uri.parse("file://"+ODK_FOLDER_PATH + PATH_SEPARATOR + TEST_APP).buildUpon()
                 .appendEncodedPath(filePath).build();
     }
 
@@ -257,6 +293,22 @@ public class ODKScopedFileUtilsTest {
         activity.startActivityForResult(intent, requestCode);
     }
 
+    /**
+     * Work in progress: This implementation is incomplete.
+     * TODO: Delete comment when implementation is complete
+     */
+    private void openDocumentPicker(){
+        ActivityScenario<TestActivity> scenario = rule.getScenario();
+
+        scenario.onActivity(activity -> {
+            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+            activity.startActivityForResult(intent, 1000);
+        });
+        Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
+        UiAutomation uiAutomation = instrumentation.getUiAutomation();
+        uiAutomation.adoptShellPermissionIdentity();
+    }
     @Nullable
     private Uri createDocumentFile(Uri folderUri, String fileName, String content) {
         try {
@@ -278,6 +330,13 @@ public class ODKScopedFileUtilsTest {
             Log.e("ODKFileUtilsTest", "File creation failed", e);
         }
         return null;
+    }
+
+    private void createAppFolderInScopedStorage() {
+        ContentValues values = new ContentValues();
+        values.put(MediaStore.Files.FileColumns.MIME_TYPE, "text/plain");
+        values.put(MediaStore.Files.FileColumns.RELATIVE_PATH, "Documents/");
+//        contentResolver
     }
 
     private Uri getMediaStoreUri(Context context, String fileName) {
@@ -302,5 +361,20 @@ public class ODKScopedFileUtilsTest {
     @After
     public void tearDown() throws IOException {
         ODKFileUtils.deleteDirectory(new File(ODK_FOLDER_PATH+PATH_SEPARATOR+TEST_APP));
+    }
+
+    public static Uri getFolderUri(Context context, String folderName) {
+        Uri queryUri = MediaStore.Files.getContentUri("external");
+        String[] projection = {MediaStore.MediaColumns._ID};
+        String selection = MediaStore.MediaColumns.RELATIVE_PATH + " = ?";
+        String[] selectionArgs = {"Documents/" + folderName};
+
+        try (Cursor cursor = context.getContentResolver().query(queryUri, projection, selection, selectionArgs, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                long id = cursor.getLong(0);
+                return ContentUris.withAppendedId(queryUri, id);
+            }
+        }
+        return null;
     }
 }

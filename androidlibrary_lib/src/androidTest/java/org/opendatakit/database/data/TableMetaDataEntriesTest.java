@@ -62,6 +62,11 @@ public class TableMetaDataEntriesTest {
     }
 
     @Test
+    public void testDescribeContents() {
+        assertEquals(0, testMetaDataEntries.describeContents());
+    }
+
+    @Test
     public void testWriteToParcel() {
         testMetaDataEntries.addEntry(entry1);
 

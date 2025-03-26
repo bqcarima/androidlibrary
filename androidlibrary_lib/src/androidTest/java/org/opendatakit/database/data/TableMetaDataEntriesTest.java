@@ -14,32 +14,31 @@ import static org.junit.Assert.*;
 public class TableMetaDataEntriesTest {
 
     //
-    TableMetaDataEntries testMetaDataEntries;
+    private TableMetaDataEntries testMetaDataEntries;
     private final String TABLE_ID = "testTable";
     private final String REV_ID = "revId";
-    KeyValueStoreEntry entry1 = new KeyValueStoreEntry();
-    KeyValueStoreEntry entry2 = new KeyValueStoreEntry();
+    private final KeyValueStoreEntry ENTRY_1 = new KeyValueStoreEntry();
+    private final KeyValueStoreEntry ENTRY_2 = new KeyValueStoreEntry();
 
     @Before
     public void setUp() {
         testMetaDataEntries = new TableMetaDataEntries(TABLE_ID, REV_ID);
 
         // first test entry
-
-        entry1.tableId = TABLE_ID;
-        entry1.partition = "partition1";
-        entry1.aspect = "aspect1";
-        entry1.key = "key1";
-        entry1.type = "number";
-        entry1.value = "value1";
+        ENTRY_1.tableId = TABLE_ID;
+        ENTRY_1.partition = "partition1";
+        ENTRY_1.aspect = "aspect1";
+        ENTRY_1.key = "key1";
+        ENTRY_1.type = "number";
+        ENTRY_1.value = "value1";
 
         // second test entry
-        entry2.tableId = TABLE_ID;
-        entry2.partition = "partition2";
-        entry2.aspect = "aspect2";
-        entry2.key = "key2";
-        entry2.type = "number";
-        entry2.value = "value2";
+        ENTRY_2.tableId = TABLE_ID;
+        ENTRY_2.partition = "partition2";
+        ENTRY_2.aspect = "aspect2";
+        ENTRY_2.key = "key2";
+        ENTRY_2.type = "number";
+        ENTRY_2.value = "value2";
 
     }
 
@@ -52,13 +51,13 @@ public class TableMetaDataEntriesTest {
 
     @Test
     public void testAddEntry() {
-        testMetaDataEntries.addEntry(entry1);
-        testMetaDataEntries.addEntry(entry2);
+        testMetaDataEntries.addEntry(ENTRY_1);
+        testMetaDataEntries.addEntry(ENTRY_2);
 
         ArrayList<KeyValueStoreEntry> entries = testMetaDataEntries.getEntries();
         assertEquals(2, entries.size());
-        assertEquals(entry1, entries.get(0));
-        assertEquals(entry2, entries.get(1));
+        assertEquals(ENTRY_1, entries.get(0));
+        assertEquals(ENTRY_2, entries.get(1));
     }
 
     @Test
@@ -68,7 +67,7 @@ public class TableMetaDataEntriesTest {
 
     @Test
     public void testWriteToParcel() {
-        testMetaDataEntries.addEntry(entry1);
+        testMetaDataEntries.addEntry(ENTRY_1);
 
         // Write the testMetaDataEntries object to a parcel
         Parcel parcel = Parcel.obtain();
@@ -93,12 +92,12 @@ public class TableMetaDataEntriesTest {
 
     @Test
     public void testEntryOrderPreservation() {
-        testMetaDataEntries.addEntry(entry2);
-        testMetaDataEntries.addEntry(entry1);
+        testMetaDataEntries.addEntry(ENTRY_2);
+        testMetaDataEntries.addEntry(ENTRY_1);
 
         ArrayList<KeyValueStoreEntry> entries = testMetaDataEntries.getEntries();
-        assertEquals(entry2, entries.get(0));
-        assertEquals(entry1, entries.get(1));
+        assertEquals(ENTRY_2, entries.get(0));
+        assertEquals(ENTRY_1, entries.get(1));
     }
 
 

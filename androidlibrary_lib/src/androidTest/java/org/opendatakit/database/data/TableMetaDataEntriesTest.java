@@ -10,6 +10,7 @@ import java.util.ArrayList;
 
 import static org.junit.Assert.*;
 
+@SuppressWarnings("ALL")
 @RunWith(AndroidJUnit4.class)
 public class TableMetaDataEntriesTest {
 

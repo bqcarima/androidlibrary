@@ -14,18 +14,18 @@ import static org.junit.Assert.*;
 @RunWith(AndroidJUnit4.class)
 public class TableMetaDataEntriesTest {
 
-    private TableMetaDataEntries testMetaDataEntries;
+    public TableMetaDataEntries testMetaDataEntries;
 
     private final KeyValueStoreEntry ENTRY_1 = new KeyValueStoreEntry();
     private final KeyValueStoreEntry ENTRY_2 = new KeyValueStoreEntry();
 
-    // Contants class containing content to be used in tests
-    private static class Constants {
+    // Constants class containing content to be used in tests
+    public static class Constants {
 
         private static final String TABLE_ID = "testTable";
         private static final String REV_ID = "revId";
 
-        // first test entry constents
+        // first test entry contents
         private static final String PARTITION1 = "partition1";
         private static final String ASPECT1 = "aspect1";
         private static final String KEY1 = "key1";
